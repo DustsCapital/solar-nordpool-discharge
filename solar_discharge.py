@@ -103,6 +103,24 @@ def discharge_command(start_time, duration_min):
         log_message(f"Modbus error: {e}", CONFIG['discharge_log_prefix'])
         return False
 
+def test_connection():
+    try:
+        if CONFIG['use_tcp']:
+            client = ModbusTcpClient(CONFIG['modbus_host'], port=CONFIG['modbus_port'])
+        else:
+            from pymodbus.client import ModbusSerialClient
+            client = ModbusSerialClient(method='rtu', port=CONFIG['modbus_host'], baudrate=CONFIG['modbus_port'], bytesize=8, parity='N', stopbits=1)
+        client.connect()
+        if client.connected:
+            result = client.read_holding_registers(0, 1, unit=CONFIG['modbus_unit'])
+            log_message(f"Connection SUCCESS: Register 0 = {result.registers}", CONFIG['discharge_log_prefix'])
+            client.close()
+            return True
+        else:
+            raise ModbusException("Not connected")
+    except Exception as e:
+        log_message(f"Connection test FAILED:")
+
 def main(test_mode=False):
     log_message("Solar discharge optimizer started", CONFIG['discharge_log_prefix'])
     cleanup_old_logs(CONFIG['discharge_log_prefix'])  # Clean old logs on start
